@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Dashboard - Project Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user me-2"></i>
+        Employee Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <span class="text-muted">Welcome back, {{ current_user.name }}!</span>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Assigned Projects
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ assigned_projects|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Hours This Week
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ "%.1f"|format(weekly_hours) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Hours This Month
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ "%.1f"|format(monthly_hours) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assigned Projects -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">My Assigned Projects</h6>
+                <a href="{{ url_for('timesheet') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-clock me-2"></i>Log Hours
+                </a>
+            </div>
+            <div class="card-body">
+                {% if assigned_projects %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Client</th>
+                                <th>Status</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Hourly Rate</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in assigned_projects %}
+                            <tr>
+                                <td>
+                                    <strong>{{ project.name }}</strong>
+                                </td>
+                                <td>{{ project.client }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if project.status == 'active' else 'secondary' if project.status == 'completed' else 'warning' if project.status == 'on_hold' else 'danger' }}">
+                                        {{ project.status.title() }}
+                                    </span>
+                                </td>
+                                <td>{{ project.start_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ project.end_date.strftime('%Y-%m-%d') if project.end_date else 'Ongoing' }}</td>
+                                <td>${{ "%.2f"|format(project.hourly_rate) }}</td>
+                                <td>
+                                    <a href="{{ url_for('timesheet') }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-clock me-1"></i>Log Hours
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-user-clock fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">You haven't been assigned to any projects yet.</p>
+                    <p class="text-muted">Contact your administrator to get assigned to projects.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('timesheet') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-clock me-2"></i>
+                            Log Work Hours
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('timesheet') }}" class="btn btn-success w-100">
+                            <i class="fas fa-history me-2"></i>
+                            View Timesheet
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-info w-100">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            View Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Hours Chart -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">This Week's Hours</h6>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 25px;">
+                    {% set weekly_percentage = (weekly_hours / 40) * 100 %}
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: {{ weekly_percentage }}%" 
+                         aria-valuenow="{{ weekly_hours }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="40">
+                        {{ "%.1f"|format(weekly_hours) }} / 40 hours
+                    </div>
+                </div>
+                <small class="text-muted">
+                    {% if weekly_hours < 40 %}
+                        You have {{ "%.1f"|format(40 - weekly_hours) }} hours remaining this week.
+                    {% elif weekly_hours == 40 %}
+                        Great job! You've completed your weekly hours.
+                    {% else %}
+                        You've worked {{ "%.1f"|format(weekly_hours - 40) }} hours overtime this week.
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Project - Project Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-edit me-2"></i>
+        Edit Project
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_projects') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Projects
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Edit Project: {{ project.name }}</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="editProjectForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Project Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ project.name }}" required>
+                            <div class="invalid-feedback">
+                                Please provide a project name.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="client" class="form-label">Client *</label>
+                            <input type="text" class="form-control" id="client" name="client" 
+                                   value="{{ project.client }}" required>
+                            <div class="invalid-feedback">
+                                Please provide a client name.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Start Date *</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ project.start_date.strftime('%Y-%m-%d') }}" required>
+                            <div class="invalid-feedback">
+                                Please select a start date.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" 
+                                   value="{{ project.end_date.strftime('%Y-%m-%d') if project.end_date else '' }}">
+                            <div class="form-text">Leave empty if the project is ongoing</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="hourly_rate" class="form-label">Hourly Rate ($) *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="hourly_rate" name="hourly_rate" 
+                                       step="0.01" min="0" value="{{ project.hourly_rate }}" required>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please provide a valid hourly rate.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="active" {{ 'selected' if project.status == 'active' else '' }}>Active</option>
+                                <option value="on_hold" {{ 'selected' if project.status == 'on_hold' else '' }}>On Hold</option>
+                                <option value="completed" {{ 'selected' if project.status == 'completed' else '' }}>Completed</option>
+                                <option value="cancelled" {{ 'selected' if project.status == 'cancelled' else '' }}>Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_projects') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Project
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('editProjectForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const client = document.getElementById('client').value.trim();
+    const startDate = document.getElementById('start_date').value;
+    const hourlyRate = document.getElementById('hourly_rate').value;
+    
+    let isValid = true;
+    
+    // Reset validation states
+    document.querySelectorAll('.form-control').forEach(input => {
+        input.classList.remove('is-invalid');
+    });
+    
+    // Validate project name
+    if (!name) {
+        document.getElementById('name').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    // Validate client
+    if (!client) {
+        document.getElementById('client').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    // Validate start date
+    if (!startDate) {
+        document.getElementById('start_date').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    // Validate hourly rate
+    if (!hourlyRate || parseFloat(hourlyRate) <= 0) {
+        document.getElementById('hourly_rate').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    // Validate end date if provided
+    const endDate = document.getElementById('end_date').value;
+    if (endDate && new Date(endDate) <= new Date(startDate)) {
+        document.getElementById('end_date').classList.add('is-invalid');
+        alert('End date must be after start date.');
+        isValid = false;
+    }
+    
+    if (!isValid) {
+        e.preventDefault();
+    }
+});
+
+// Set minimum date for end date based on start date
+document.getElementById('start_date').addEventListener('change', function() {
+    const startDate = this.value;
+    const endDateInput = document.getElementById('end_date');
+    if (startDate) {
+        endDateInput.min = startDate;
+    }
+});
+</script>
+{% endblock %}

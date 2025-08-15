@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - Project Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-project-diagram me-2"></i>
+        Projects Management
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('create_project') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create New Project
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- Search and Filter -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Search & Filter Projects</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="searchInput" class="form-label">Search Projects</label>
+                <input type="text" class="form-control" id="searchInput" placeholder="Search by name or client...">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="statusFilter" class="form-label">Status Filter</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="on_hold">On Hold</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="button" class="btn btn-outline-primary" onclick="searchProjects()">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <i class="fas fa-times me-2"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Projects Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">All Projects</h6>
+    </div>
+    <div class="card-body">
+        {% if projects %}
+        <div class="table-responsive">
+            <table class="table table-bordered" id="projectsTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Client</th>
+                        <th>Status</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Hourly Rate</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                    <tr data-project-id="{{ project.id }}">
+                        <td>
+                            <strong>{{ project.name }}</strong>
+                        </td>
+                        <td>{{ project.client }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if project.status == 'active' else 'secondary' if project.status == 'completed' else 'warning' if project.status == 'on_hold' else 'danger' }}">
+                                {{ project.status.title() }}
+                            </span>
+                        </td>
+                        <td>{{ project.start_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ project.end_date.strftime('%Y-%m-%d') if project.end_date else 'Ongoing' }}</td>
+                        <td>${{ "%.2f"|format(project.hourly_rate) }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('edit_project', project_id=project.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProject({{ project.id }}, '{{ project.name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No projects found. Create your first project to get started!</p>
+            <a href="{{ url_for('create_project') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Project
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the project "<span id="projectNameToDelete"></span>"?
+                <br><br>
+                <strong>Warning:</strong> This action cannot be undone and will also delete all related assignments and timesheet entries.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete Project</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function searchProjects() {
+    const query = document.getElementById('searchInput').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    fetch(`/api/search_projects?q=${encodeURIComponent(query)}&status=${encodeURIComponent(statusFilter)}`)
+        .then(response => response.json())
+        .then(data => {
+            updateProjectsTable(data);
+        })
+        .catch(error => {
+            console.error('Error searching projects:', error);
+        });
+}
+
+function updateProjectsTable(projects) {
+    const tbody = document.querySelector('#projectsTable tbody');
+    tbody.innerHTML = '';
+    
+    if (projects.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">No projects found matching your search criteria.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    projects.forEach(project => {
+        const statusClass = project.status === 'active' ? 'success' : 
+                           project.status === 'completed' ? 'secondary' : 
+                           project.status === 'on_hold' ? 'warning' : 'danger';
+        
+        const row = `
+            <tr data-project-id="${project.id}">
+                <td><strong>${project.name}</strong></td>
+                <td>${project.client}</td>
+                <td>
+                    <span class="badge bg-${statusClass}">
+                        ${project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                    </span>
+                </td>
+                <td>${project.start_date}</td>
+                <td>${project.end_date || 'Ongoing'}</td>
+                <td>$${parseFloat(project.hourly_rate).toFixed(2)}</td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <a href="/admin/projects/${project.id}/edit" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProject(${project.id}, '${project.name}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        tbody.innerHTML += row;
+    });
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    location.reload();
+}
+
+function deleteProject(projectId, projectName) {
+    document.getElementById('projectNameToDelete').textContent = projectName;
+    document.getElementById('deleteForm').action = `/admin/projects/${projectId}/delete`;
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+// Search on Enter key press
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchProjects();
+    }
+});
+
+// Search on status filter change
+document.getElementById('statusFilter').addEventListener('change', function() {
+    searchProjects();
+});
+</script>
+{% endblock %}

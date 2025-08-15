@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Billing - Project Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-dollar-sign me-2"></i>
+        Billing Management
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <span class="text-muted">Generate billing records for completed projects</span>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- Billing Summary -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Projects
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ projects_billing|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Hours
+                        </div>
+                                                       <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                   {{ "%.1f"|format(total_all_hours) }}
+                               </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Amount
+                        </div>
+                                                       <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                   ${{ "%.2f"|format(total_all_amount) }}
+                               </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Average Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            ${{ "%.2f"|format(average_rate) }}/hr
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Projects Billing Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Project Billing Overview</h6>
+    </div>
+    <div class="card-body">
+        {% if projects_billing %}
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Client</th>
+                        <th>Status</th>
+                        <th>Total Hours</th>
+                        <th>Hourly Rate</th>
+                        <th>Total Amount</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project, total_hours, total_amount in projects_billing %}
+                    <tr>
+                        <td>
+                            <strong>{{ project.name }}</strong>
+                        </td>
+                        <td>{{ project.client }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if project.status == 'active' else 'secondary' if project.status == 'completed' else 'warning' if project.status == 'on_hold' else 'danger' }}">
+                                {{ project.status.title() }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if total_hours %}
+                                <span class="badge bg-primary">{{ "%.1f"|format(total_hours) }}h</span>
+                            {% else %}
+                                <span class="text-muted">0h</span>
+                            {% endif %}
+                        </td>
+                        <td>${{ "%.2f"|format(project.hourly_rate) }}</td>
+                        <td>
+                            {% if total_amount %}
+                                <strong>${{ "%.2f"|format(total_amount) }}</strong>
+                            {% else %}
+                                <span class="text-muted">$0.00</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if total_hours and total_hours > 0 %}
+                                <form method="POST" action="{{ url_for('generate_billing') }}" style="display: inline;">
+                                    <input type="hidden" name="project_id" value="{{ project.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" 
+                                            onclick="return confirm('Generate billing record for {{ project.name }}?')">
+                                        <i class="fas fa-file-invoice-dollar"></i> Generate Bill
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted">No hours logged</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-dollar-sign fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No projects found for billing.</p>
+            <p class="text-muted">Create projects and log hours to generate billing records.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Billing Chart -->
+<div class="row">
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Billing Overview Chart</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="billingChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Top Projects by Revenue</h6>
+            </div>
+            <div class="card-body">
+                {% set top_projects = projects_billing|sort(attribute='total_amount', reverse=true)|slice(0, 5) %}
+                {% if top_projects %}
+                    {% for project, total_hours, total_amount in top_projects %}
+                        {% if total_amount %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px;">
+                                    <i class="fas fa-project-diagram text-white"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">{{ project.name }}</h6>
+                                <small class="text-muted">{{ project.client }}</small>
+                                <br>
+                                <strong class="text-success">${{ "%.2f"|format(total_amount) }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No billing data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Billing Chart
+const ctx = document.getElementById('billingChart').getContext('2d');
+const billingData = {{ projects_billing | tojson }};
+
+const labels = billingData.map(item => item[0].name);
+const amounts = billingData.map(item => parseFloat(item[2]) || 0);
+const hours = billingData.map(item => parseFloat(item[1]) || 0);
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Total Amount ($)',
+            data: amounts,
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderColor: 'rgba(102, 126, 234, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
