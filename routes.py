@@ -335,7 +335,24 @@ def admin_billing():
         db.func.sum(Timesheet.hours_worked * Project.hourly_rate).label('total_amount')
     ).outerjoin(Timesheet, Project.id == Timesheet.project_id).group_by(Project.id).all()
     
-    return render_template('admin_billing.html', projects_billing=projects_billing)
+    # Calculate totals for summary cards
+    total_all_hours = 0
+    total_all_amount = 0
+    
+    for project, total_hours, total_amount in projects_billing:
+        if total_hours:
+            total_all_hours += total_hours
+        if total_amount:
+            total_all_amount += total_amount
+    
+    # Calculate average rate
+    average_rate = total_all_amount / total_all_hours if total_all_hours > 0 else 0
+    
+    return render_template('admin_billing.html', 
+                         projects_billing=projects_billing,
+                         total_all_hours=total_all_hours,
+                         total_all_amount=total_all_amount,
+                         average_rate=average_rate)
 
 @app.route('/admin/billing/generate', methods=['POST'])
 @login_required
