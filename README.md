@@ -121,6 +121,10 @@ ADMIN_PASSWORD=replace-with-a-strong-password
 
 New signups are employees. Set a unique `SECRET_KEY` and strong `ADMIN_PASSWORD` in the deployment environment before starting the app; the documented default admin credentials are for local demonstration only.
 
+### Vercel Deployment
+
+Vercel detects the Flask app in `app.py`. For Vercel, attach a persistent PostgreSQL database and set `DATABASE_URL`, `SECRET_KEY`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in the project's environment variables. SQLite is for local development; Vercel function files are not persistent storage. Deploy the `main` branch after connecting this GitHub repository in Vercel.
+
 ### Database Options
 - **SQLite (Default)**: `sqlite:///client_billing.db` (stored under Flask's `instance/` directory)
 - **MySQL**: `mysql+pymysql://username:password@localhost/client_billing_system`

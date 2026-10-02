@@ -14,7 +14,13 @@ except:
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///client_billing.db')
+database_url = os.getenv('DATABASE_URL')
+if os.getenv('VERCEL') and not database_url:
+    raise RuntimeError('Set DATABASE_URL to a persistent PostgreSQL database in Vercel.')
+if database_url and database_url.startswith(('postgres://', 'postgresql://')):
+    database_url = database_url.replace('postgres://', 'postgresql+psycopg://', 1)
+    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///client_billing.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -84,6 +90,23 @@ class Billing(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def initialize_database():
+    with app.app_context():
+        db.create_all()
+
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@company.com')
+        if not User.query.filter_by(email=admin_email).first():
+            admin_user = User(
+                name='Admin User',
+                email=admin_email,
+                password=generate_password_hash(os.getenv('ADMIN_PASSWORD', 'admin123')),
+                role='admin'
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+
+initialize_database()
 
 # Basic routes
 @app.route('/')
@@ -400,20 +423,4 @@ def log_hours():
     return redirect(url_for('timesheet'))
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        # Create admin user if not exists
-        admin_user = User.query.filter_by(email='admin@company.com').first()
-        if not admin_user:
-            admin_password = 'admin123'
-            hashed_password = generate_password_hash(admin_password)
-            admin_user = User(
-                name='Admin User',
-                email='admin@company.com',
-                password=hashed_password,
-                role='admin'
-            )
-            db.session.add(admin_user)
-            db.session.commit()
-            print("✅ Admin user created: admin@company.com / admin123")
     app.run(debug=True, host='0.0.0.0', port=5000)
