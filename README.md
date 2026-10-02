@@ -53,7 +53,7 @@ billing(id, project_id, total_hours, total_amount, billing_date, created_at)
 ## 🛠️ Installation & Setup
 
 ### Prerequisites
-- Python 3.7 or higher
+- Python 3.8 or higher
 - pip (Python package installer)
 
 ### Quick Start (Recommended)
@@ -114,11 +114,15 @@ Create a `.env` file in the project root:
 
 ```env
 SECRET_KEY=your-super-secret-key-change-this-in-production
-DATABASE_URL=sqlite:///instance/client_billing.db
+DATABASE_URL=sqlite:///client_billing.db
+ADMIN_EMAIL=admin@company.com
+ADMIN_PASSWORD=replace-with-a-strong-password
 ```
 
+New signups are employees. Set a unique `SECRET_KEY` and strong `ADMIN_PASSWORD` in the deployment environment before starting the app; the documented default admin credentials are for local demonstration only.
+
 ### Database Options
-- **SQLite (Default)**: `sqlite:///instance/client_billing.db`
+- **SQLite (Default)**: `sqlite:///client_billing.db` (stored under Flask's `instance/` directory)
 - **MySQL**: `mysql+pymysql://username:password@localhost/client_billing_system`
 
 ## 📱 Usage Guide

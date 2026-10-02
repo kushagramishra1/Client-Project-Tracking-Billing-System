@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-super-secret-key-change-this-in-production'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///client_billing.db'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-before-deployment')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///client_billing.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -57,6 +57,23 @@ class Billing(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+def initialize_database():
+    with app.app_context():
+        db.create_all()
+
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@company.com')
+        if not User.query.filter_by(email=admin_email).first():
+            admin_user = User(
+                name='Admin User',
+                email=admin_email,
+                password=generate_password_hash(os.getenv('ADMIN_PASSWORD', 'admin123')),
+                role='admin'
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+
+initialize_database()
+
 # Routes
 @app.route('/')
 def index():
@@ -85,7 +102,7 @@ def signup():
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
-        role = request.form['role']
+        role = 'employee'
         
         if User.query.filter_by(email=email).first():
             flash('Email already registered', 'error')
@@ -193,7 +210,7 @@ def create_project():
         name = request.form['name']
         client = request.form['client']
         start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d').date()
-        end_date = request.form.get('end_date')
+        end_date = request.form.get('end_date') or None
         if end_date:
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
         hourly_rate = float(request.form['hourly_rate'])
@@ -401,6 +418,16 @@ def admin_billing():
         total_all_hours += total_hours
         total_all_amount += total_amount
     
+    top_projects = sorted(
+        (row for row in projects_billing if row[2] > 0),
+        key=lambda row: row[2],
+        reverse=True
+    )[:5]
+    billing_chart_data = [
+        {'name': project.name, 'hours': total_hours, 'amount': total_amount}
+        for project, total_hours, total_amount in projects_billing
+    ]
+
     # Calculate average rate safely
     average_rate = total_all_amount / total_all_hours if total_all_hours > 0 else 0
     
@@ -408,7 +435,9 @@ def admin_billing():
                          projects_billing=projects_billing,
                          total_all_hours=total_all_hours,
                          total_all_amount=total_all_amount,
-                         average_rate=average_rate)
+                         average_rate=average_rate,
+                         top_projects=top_projects,
+                         billing_chart_data=billing_chart_data)
 
 @app.route('/admin/billing/generate', methods=['POST'])
 @login_required
@@ -498,19 +527,4 @@ def search_projects():
     return jsonify(result)
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        
-        # Create default admin user if it doesn't exist
-        admin_user = User.query.filter_by(email='admin@company.com').first()
-        if not admin_user:
-            admin_password = generate_password_hash('admin123')
-            admin_user = User(name='Admin User', email='admin@company.com', 
-                            password=admin_password, role='admin')
-            db.session.add(admin_user)
-            db.session.commit()
-            print("Default admin user created:")
-            print("Email: admin@company.com")
-            print("Password: admin123")
-    
     app.run(debug=True, host='0.0.0.0', port=5000)

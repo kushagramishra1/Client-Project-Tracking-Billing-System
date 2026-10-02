@@ -199,7 +199,6 @@
                 <h6 class="m-0 font-weight-bold text-primary">Top Projects by Revenue</h6>
             </div>
             <div class="card-body">
-                {% set top_projects = projects_billing|sort(attribute='total_amount', reverse=true)|slice(0, 5) %}
                 {% if top_projects %}
                     {% for project, total_hours, total_amount in top_projects %}
                         {% if total_amount %}
@@ -230,11 +229,10 @@
 <script>
 // Billing Chart
 const ctx = document.getElementById('billingChart').getContext('2d');
-const billingData = {{ projects_billing | tojson }};
+const billingData = {{ billing_chart_data | tojson }};
 
-const labels = billingData.map(item => item[0].name);
-const amounts = billingData.map(item => parseFloat(item[2]) || 0);
-const hours = billingData.map(item => parseFloat(item[1]) || 0);
+const labels = billingData.map(item => item.name);
+const amounts = billingData.map(item => parseFloat(item.amount) || 0);
 
 new Chart(ctx, {
     type: 'bar',

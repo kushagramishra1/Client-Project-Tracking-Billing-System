@@ -114,7 +114,7 @@ def signup():
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
-        role = request.form['role']
+        role = 'employee'
         
         # Check if user already exists
         if User.query.filter_by(email=email).first():
@@ -345,13 +345,18 @@ def admin_billing():
     
     # Sort by total amount and take top 5
     top_projects = sorted(top_projects, key=lambda x: x[2], reverse=True)[:5]
+    billing_chart_data = [
+        {'name': project.name, 'hours': float(total_hours or 0), 'amount': float(total_amount or 0)}
+        for project, total_hours, total_amount in projects_billing
+    ]
     
     return render_template('admin_billing.html', 
                          projects_billing=projects_billing,
                          total_all_hours=total_all_hours,
                          total_all_amount=total_all_amount,
                          average_rate=average_rate,
-                         top_projects=top_projects)
+                         top_projects=top_projects,
+                         billing_chart_data=billing_chart_data)
 
 @app.route('/timesheet/log', methods=['POST'])
 @login_required

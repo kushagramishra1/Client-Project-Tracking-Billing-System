@@ -33,7 +33,7 @@ def signup():
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
-        role = request.form['role']
+        role = 'employee'
         
         # Check if user already exists
         if User.query.filter_by(email=email).first():

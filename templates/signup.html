@@ -61,20 +61,6 @@
                             </div>
                         </div>
                         
-                        <div class="mb-4">
-                            <label for="role" class="form-label">Role</label>
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="fas fa-briefcase"></i>
-                                </span>
-                                <select class="form-select" id="role" name="role" required>
-                                    <option value="">Select Role</option>
-                                    <option value="employee">Employee</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            </div>
-                        </div>
-                        
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fas fa-user-plus me-2"></i>
@@ -114,9 +100,7 @@ document.getElementById('signupForm').addEventListener('submit', function(e) {
     const name = document.getElementById('name').value;
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value;
-    
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !password) {
         e.preventDefault();
         alert('Please fill in all fields');
         return false;
